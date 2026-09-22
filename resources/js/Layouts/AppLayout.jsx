@@ -52,7 +52,7 @@ export default function AppLayout({ children, activeTab = 'donations', actionBut
     <div className="min-h-screen w-full bg-[#f6eee9] text-slate-800 font-sans flex flex-col md:flex-row">
       
       {/* DESKTOP FULL SCREEN LEFT SIDEBAR */}
-      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-[#eee4dd] p-6 h-screen sticky top-0 justify-between flex-shrink-0 z-20">
+      <aside className="hidden md:flex flex-col w-72 bg-white border-r border-[#eee4dd] p-6 h-screen sticky top-0 justify-between flex-shrink-0 z-20">
         
         <div>
           {/* Top Brand Logo & Customized Trust Name */}
@@ -60,13 +60,10 @@ export default function AppLayout({ children, activeTab = 'donations', actionBut
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-500 text-white flex items-center justify-center font-black text-xl shadow-lg shadow-orange-500/20 flex-shrink-0">
               🐘
             </div>
-            <div className="overflow-hidden">
-              <h1 className="font-heading font-black text-slate-900 text-base tracking-tight leading-snug truncate" title={trustName}>
+            <div className="flex-1 min-w-0">
+              <h1 className="font-heading font-black text-slate-900 text-base md:text-lg tracking-tight leading-tight" title={trustName}>
                 {trustName}
               </h1>
-              <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full mt-0.5 inline-block">
-                Verified Trust Portal
-              </span>
             </div>
           </div>
 
@@ -138,11 +135,10 @@ export default function AppLayout({ children, activeTab = 'donations', actionBut
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white font-black text-base flex-shrink-0">
             🐘
           </div>
-          <div className="overflow-hidden">
-            <span className="font-heading font-black text-slate-900 text-sm truncate block" title={trustName}>
+          <div className="flex-1 min-w-0">
+            <span className="font-heading font-black text-slate-900 text-sm md:text-base leading-tight block" title={trustName}>
               {trustName}
             </span>
-            <p className="text-[10px] font-bold text-amber-700">Official Portal</p>
           </div>
         </div>
         <button

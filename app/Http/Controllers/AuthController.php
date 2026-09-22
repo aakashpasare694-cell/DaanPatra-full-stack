@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Trust;
 use App\Models\User;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -14,7 +15,7 @@ class AuthController extends Controller
     public function showLogin()
     {
         if (Auth::check()) {
-            return redirect()->route('donations.index');
+            return redirect()->route('dashboard');
         }
         return Inertia::render('Auth/Login');
     }
@@ -30,7 +31,10 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
-            return redirect()->intended(route('donations.index'));
+
+            ActivityLogger::log('USER_LOGIN', "User '" . Auth::user()->name . "' logged into the trust portal");
+
+            return redirect()->intended(route('dashboard'));
         }
 
         return back()->withErrors([
@@ -41,7 +45,7 @@ class AuthController extends Controller
     public function showRegister()
     {
         if (Auth::check()) {
-            return redirect()->route('donations.index');
+            return redirect()->route('dashboard');
         }
         return Inertia::render('Auth/Register');
     }
@@ -66,15 +70,22 @@ class AuthController extends Controller
             'name' => 'Trust Admin',
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'role' => 'admin',
         ]);
 
         Auth::login($user);
 
-        return redirect()->route('donations.index');
+        ActivityLogger::log('TRUST_REGISTERED', "Created and registered new trust '{$trust->trust_name}'");
+
+        return redirect()->route('dashboard');
     }
 
     public function logout(Request $request)
     {
+        if (Auth::check()) {
+            ActivityLogger::log('USER_LOGOUT', "User '" . Auth::user()->name . "' logged out");
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

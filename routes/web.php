@@ -1,9 +1,13 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DonationController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SettingController;
+use App\Http\Controllers\TrustUserController;
 use Illuminate\Support\Facades\Route;
 
 // Guest Routes
@@ -19,8 +23,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
     Route::get('/', function () {
-        return redirect()->route('donations.index');
+        return redirect()->route('dashboard');
     });
+
+    // Dashboard Route
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Donations Routes
     Route::get('/donations', [DonationController::class, 'index'])->name('donations.index');
@@ -37,4 +44,17 @@ Route::middleware('auth')->group(function () {
 
     // Reports Route
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+
+    // Activity Logs Route
+    Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
+
+    // Trust User Management & Roles Route
+    Route::get('/users', [TrustUserController::class, 'index'])->name('users.index');
+    Route::post('/users', [TrustUserController::class, 'store'])->name('users.store');
+    Route::put('/users/{id}/role', [TrustUserController::class, 'updateRole'])->name('users.updateRole');
+    Route::delete('/users/{id}', [TrustUserController::class, 'destroy'])->name('users.destroy');
+
+    // Settings Module & Receipt Customizer Sub-module Routes
+    Route::get('/settings/receipt', [SettingController::class, 'index'])->name('settings.receipt');
+    Route::post('/settings/receipt', [SettingController::class, 'updateReceipt'])->name('settings.receipt.update');
 });

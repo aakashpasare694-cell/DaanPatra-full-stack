@@ -16,7 +16,9 @@ class User extends Authenticatable
         'trust_id',
         'name',
         'email',
+        'mobile',
         'password',
+        'role', // 'admin' or 'normal'
     ];
 
     protected $hidden = [
@@ -34,5 +36,20 @@ class User extends Authenticatable
     public function trust()
     {
         return $this->belongsTo(Trust::class, 'trust_id', '_id');
+    }
+
+    public function isAdmin(): bool
+    {
+        return empty($this->role) || strtolower($this->role) === 'admin';
+    }
+
+    public function isNormal(): bool
+    {
+        return strtolower($this->role ?? '') === 'normal';
+    }
+
+    public function canPerformCrud(): bool
+    {
+        return $this->isAdmin();
     }
 }

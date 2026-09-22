@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Donation;
+use App\Services\ActivityLogger;
 use App\Services\DonationService;
 use App\Services\Notification\EmailReceiptService;
 use App\Services\Notification\WhatsAppReceiptService;
@@ -99,10 +100,16 @@ class DonationController extends Controller
 
     public function store(Request $request)
     {
+        $user = Auth::user();
+        if ($user->isNormal()) {
+            return back()->with('error', 'Access Denied: Read-only members cannot create donation records.');
+        }
+
         $validated = $request->validate([
             'donor_name' => 'required|string|max:255',
             'donor_mobile' => 'required|string|max:20',
             'donor_email' => 'nullable|email|max:255',
+            'income_type' => 'nullable|string|max:255',
             'amount' => 'required|numeric|min:1',
             'amount_in_words' => 'nullable|string|max:255',
             'payment_method' => 'required|string|in:Cash,Online,QR Code,Cheque',
@@ -111,7 +118,7 @@ class DonationController extends Controller
             'collected_by' => 'required|string|max:255',
         ]);
 
-        $trustId = (string) Auth::user()->trust_id;
+        $trustId = (string) $user->trust_id;
 
         // Auto-generate receipt number
         $receiptNumber = $this->donationService->generateReceiptNumber($trustId);
@@ -133,6 +140,7 @@ class DonationController extends Controller
             'donor_name' => $validated['donor_name'],
             'donor_mobile' => $validated['donor_mobile'],
             'donor_email' => $validated['donor_email'] ?? null,
+            'income_type' => $validated['income_type'] ?? 'Donation / Vargani',
             'amount' => (float) $validated['amount'],
             'amount_in_words' => $amountInWords,
             'payment_method' => $validated['payment_method'],
@@ -144,12 +152,25 @@ class DonationController extends Controller
             'paid_at' => $validated['payment_status'] === 'Paid' ? now() : null,
         ]);
 
-        // Send initial email receipt if email provided
+        // Send initial notifications
         if (!empty($donation->donor_email)) {
             (new EmailReceiptService())->sendReceipt($donation);
         }
         (new WhatsAppReceiptService())->sendReceipt($donation);
         (new SmsReceiptService())->sendReceipt($donation);
+
+        // Audit Log
+        ActivityLogger::log(
+            'DONATION_CREATED',
+            "Recorded {$donation->income_type} of ₹{$donation->amount} from {$donation->donor_name} (Receipt #{$donation->receipt_number})",
+            [
+                'receipt_number' => $donation->receipt_number,
+                'donor_name' => $donation->donor_name,
+                'amount' => $donation->amount,
+                'payment_method' => $donation->payment_method,
+                'status' => $donation->payment_status,
+            ]
+        );
 
         return back()->with([
             'success' => 'Donation recorded successfully!',
@@ -159,7 +180,12 @@ class DonationController extends Controller
 
     public function markAsPaid($id)
     {
-        $trustId = (string) Auth::user()->trust_id;
+        $user = Auth::user();
+        if ($user->isNormal()) {
+            return back()->with('error', 'Access Denied: Read-only members cannot update payment status.');
+        }
+
+        $trustId = (string) $user->trust_id;
         $donation = Donation::where('trust_id', $trustId)->where('_id', $id)->firstOrFail();
 
         $donation->update([
@@ -169,12 +195,28 @@ class DonationController extends Controller
             'follow_up_after_days' => null,
         ]);
 
+        // Audit Log
+        ActivityLogger::log(
+            'PAYMENT_MARKED_PAID',
+            "Marked Receipt #{$donation->receipt_number} for {$donation->donor_name} (₹{$donation->amount}) as Paid",
+            [
+                'receipt_number' => $donation->receipt_number,
+                'amount' => $donation->amount,
+                'donor_name' => $donation->donor_name,
+            ]
+        );
+
         return back()->with('success', "Receipt #{$donation->receipt_number} marked as Paid.");
     }
 
     public function sendReceipt(Request $request, $id)
     {
-        $trustId = (string) Auth::user()->trust_id;
+        $user = Auth::user();
+        if ($user->isNormal()) {
+            return back()->with('error', 'Access Denied: Read-only members cannot re-send receipts.');
+        }
+
+        $trustId = (string) $user->trust_id;
         $donation = Donation::where('trust_id', $trustId)->where('_id', $id)->firstOrFail();
         $channel = $request->input('channel', 'email');
 
@@ -189,18 +231,31 @@ class DonationController extends Controller
             $msg = "SMS receipt notification queued for {$donation->donor_mobile}.";
         }
 
+        // Audit Log
+        ActivityLogger::log(
+            'RECEIPT_SENT',
+            "Dispatched digital receipt for #{$donation->receipt_number} via " . strtoupper($channel),
+            ['receipt_number' => $donation->receipt_number, 'channel' => $channel]
+        );
+
         return back()->with('success', $msg);
     }
 
     public function update(Request $request, $id)
     {
-        $trustId = (string) Auth::user()->trust_id;
+        $user = Auth::user();
+        if ($user->isNormal()) {
+            return back()->with('error', 'Access Denied: Read-only members cannot update records.');
+        }
+
+        $trustId = (string) $user->trust_id;
         $donation = Donation::where('trust_id', $trustId)->where('_id', $id)->firstOrFail();
 
         $validated = $request->validate([
             'donor_name' => 'required|string|max:255',
             'donor_mobile' => 'required|string|max:20',
             'donor_email' => 'nullable|email|max:255',
+            'income_type' => 'nullable|string|max:255',
             'amount' => 'required|numeric|min:1',
             'amount_in_words' => 'nullable|string|max:255',
             'payment_method' => 'required|string|in:Cash,Online,QR Code,Cheque',
@@ -210,14 +265,36 @@ class DonationController extends Controller
 
         $donation->update($validated);
 
+        // Audit Log
+        ActivityLogger::log(
+            'DONATION_UPDATED',
+            "Updated donation record details for Receipt #{$donation->receipt_number}",
+            ['receipt_number' => $donation->receipt_number, 'donor_name' => $donation->donor_name]
+        );
+
         return back()->with('success', 'Donation details updated successfully.');
     }
 
     public function destroy($id)
     {
-        $trustId = (string) Auth::user()->trust_id;
+        $user = Auth::user();
+        if ($user->isNormal()) {
+            return back()->with('error', 'Access Denied: Read-only members cannot delete records.');
+        }
+
+        $trustId = (string) $user->trust_id;
         $donation = Donation::where('trust_id', $trustId)->where('_id', $id)->firstOrFail();
+        $receiptNo = $donation->receipt_number;
+        $donorName = $donation->donor_name;
+
         $donation->delete();
+
+        // Audit Log
+        ActivityLogger::log(
+            'DONATION_DELETED',
+            "Deleted donation record #{$receiptNo} ({$donorName})",
+            ['receipt_number' => $receiptNo, 'donor_name' => $donorName]
+        );
 
         return back()->with('success', 'Donation deleted successfully.');
     }

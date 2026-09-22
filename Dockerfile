@@ -13,11 +13,13 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     ca-certificates \
     curl \
+    autoconf \
+    build-essential \
     nodejs \
     npm \
     && docker-php-ext-install zip \
-    && pecl install mongodb || true \
-    && docker-php-ext-enable mongodb || true
+    && pecl install mongodb \
+    && docker-php-ext-enable mongodb
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer

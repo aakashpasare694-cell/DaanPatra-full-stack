@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     libssl-dev \
     pkg-config \
+    ca-certificates \
+    curl \
     nodejs \
     npm \
     && docker-php-ext-install zip \
@@ -30,9 +32,12 @@ COPY . .
 RUN composer install --no-dev --optimize-autoloader --ignore-platform-reqs
 RUN npm install && npm run build
 
+# Ensure SQLite database file exists and set permissions
+RUN mkdir -p database && touch database/database.sqlite
+
 # Expose port
 EXPOSE 8000
 
 # Start command
-CMD ["sh", "-c", "php artisan serve --host=0.0.0.0 --port=${PORT:-8000}"]
+CMD ["sh", "-c", "php artisan config:clear && php artisan serve --host=0.0.0.0 --port=${PORT:-8000}"]
 

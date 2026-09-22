@@ -195,7 +195,7 @@ export default function AppLayout({ children, activeTab = 'donations', actionBut
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 mb-6 border-b border-[#eee4dd]">
           <div>
             <h1 className="font-heading text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
-              Hello, {userName.split(' ')[0]}
+              Hello, {userName}
             </h1>
             <p className="text-slate-500 text-xs md:text-sm mt-0.5 font-medium">
               Today is {currentDate}

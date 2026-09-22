@@ -16,23 +16,17 @@ class DashboardController extends Controller
         $trustId = (string) $user->trust_id;
         $user->load('trust');
 
-        // Core Summary Metrics
-        $totalPledged = (float) Donation::where('trust_id', $trustId)->sum('amount');
-        
-        $collectedAmount = (float) Donation::where('trust_id', $trustId)
-            ->where('payment_status', 'Paid')
-            ->sum('amount');
-
-        $pendingAmount = (float) Donation::where('trust_id', $trustId)
-            ->where('payment_status', 'Pending')
-            ->sum('amount');
-
-        $totalExpenses = (float) Expense::where('trust_id', $trustId)->sum('amount');
-        $donorCount = Donation::where('trust_id', $trustId)->count();
-        $netBalance = $collectedAmount - $totalExpenses;
-
-        // Payment Method Breakdown for Charts
+        // Fetch Collections once to reduce remote DB roundtrip latency
         $allDonations = Donation::where('trust_id', $trustId)->get();
+        $allExpenses = Expense::where('trust_id', $trustId)->get();
+
+        // Core Summary Metrics calculated in memory
+        $totalPledged = (float) $allDonations->sum('amount');
+        $collectedAmount = (float) $allDonations->where('payment_status', 'Paid')->sum('amount');
+        $pendingAmount = (float) $allDonations->where('payment_status', 'Pending')->sum('amount');
+        $totalExpenses = (float) $allExpenses->sum('amount');
+        $donorCount = $allDonations->count();
+        $netBalance = $collectedAmount - $totalExpenses;
         
         $methodsMap = [
             'Cash' => ['name' => 'Cash', 'value' => 0, 'count' => 0, 'color' => '#f59e0b'],

@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link, usePage } from '@inertiajs/react';
-import { motion } from 'framer-motion';
 import AppLayout from '@/Layouts/AppLayout';
 import { 
   IndianRupee, 
@@ -9,32 +8,52 @@ import {
   Users, 
   TrendingUp, 
   BarChart3, 
-  Sparkles, 
   Plus, 
   Wallet, 
   ArrowRight,
   MoreHorizontal,
   Calendar as CalendarIcon,
-  Bell,
-  HeartHandshake
+  Bell
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
   AreaChart, 
   Area, 
-  BarChart, 
-  Bar, 
-  PieChart, 
-  Pie, 
-  Cell, 
   XAxis, 
   YAxis, 
   Tooltip, 
   CartesianGrid 
 } from 'recharts';
 
-export default function Dashboard({ metrics, charts, topDonors, recentActivity }) {
+export default function Dashboard({ 
+  metrics = {}, 
+  charts = {}, 
+  topDonors = [], 
+  recentActivity = [] 
+}) {
   const { auth } = usePage().props;
+
+  // Defensive prop fallbacks to prevent React white-screen crashes
+  const safeMetrics = {
+    totalPledged: 0,
+    collectedAmount: 0,
+    pendingAmount: 0,
+    totalExpenses: 0,
+    netBalance: 0,
+    donorCount: 0,
+    ...metrics
+  };
+
+  const safeCharts = {
+    paymentMethods: [],
+    trends: [],
+    statusBreakdown: [],
+    expensesByCategory: [],
+    ...charts
+  };
+
+  const safeTopDonors = Array.isArray(topDonors) ? topDonors : [];
+  const safeRecentActivity = Array.isArray(recentActivity) ? recentActivity : [];
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('en-IN', {
@@ -43,8 +62,6 @@ export default function Dashboard({ metrics, charts, topDonors, recentActivity }
       maximumFractionDigits: 0
     }).format(val || 0);
   };
-
-  const COLORS = ['#5c246f', '#0ea5e9', '#f97316', '#10b981', '#ec4899', '#8b5cf6'];
 
   return (
     <AppLayout 
@@ -64,7 +81,7 @@ export default function Dashboard({ metrics, charts, topDonors, recentActivity }
         {/* LEFT & CENTER WORKSPACE (8 COLS) */}
         <div className="lg:col-span-8 space-y-6">
           
-          {/* 3 TOP COLORFUL SUMMARY CARDS (EXACT MATCHING REFERENCE DESIGN) */}
+          {/* 3 TOP COLORFUL SUMMARY CARDS */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             
             {/* Card 1: Purple (Total Collection) */}
@@ -80,18 +97,18 @@ export default function Dashboard({ metrics, charts, topDonors, recentActivity }
 
               <div className="mt-4">
                 <h3 className="font-heading font-extrabold text-lg leading-tight">Total Collection</h3>
-                <p className="text-xs text-purple-200 mt-0.5">{formatCurrency(metrics.collectedAmount)}</p>
+                <p className="text-xs text-purple-200 mt-0.5">{formatCurrency(safeMetrics.collectedAmount)}</p>
               </div>
 
               <div className="mt-4 space-y-1.5">
                 <div className="flex justify-between text-[11px] font-semibold text-purple-200">
-                  <span>{metrics.totalPledged > 0 ? Math.round((metrics.collectedAmount / metrics.totalPledged) * 100) : 0}% Target</span>
-                  <span>{metrics.donorCount} Devotees</span>
+                  <span>{safeMetrics.totalPledged > 0 ? Math.round((safeMetrics.collectedAmount / safeMetrics.totalPledged) * 100) : 0}% Target</span>
+                  <span>{safeMetrics.donorCount} Devotees</span>
                 </div>
                 <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-white rounded-full transition-all" 
-                    style={{ width: `${Math.min(100, metrics.totalPledged > 0 ? Math.round((metrics.collectedAmount / metrics.totalPledged) * 100) : 0)}%` }}
+                    style={{ width: `${Math.min(100, safeMetrics.totalPledged > 0 ? Math.round((safeMetrics.collectedAmount / safeMetrics.totalPledged) * 100) : 0)}%` }}
                   ></div>
                 </div>
               </div>
@@ -110,7 +127,7 @@ export default function Dashboard({ metrics, charts, topDonors, recentActivity }
 
               <div className="mt-4">
                 <h3 className="font-heading font-extrabold text-lg leading-tight">Total Expenses</h3>
-                <p className="text-xs text-teal-100 mt-0.5">{formatCurrency(metrics.totalExpenses)}</p>
+                <p className="text-xs text-teal-100 mt-0.5">{formatCurrency(safeMetrics.totalExpenses)}</p>
               </div>
 
               <div className="mt-4 space-y-1.5">
@@ -137,7 +154,7 @@ export default function Dashboard({ metrics, charts, topDonors, recentActivity }
 
               <div className="mt-4">
                 <h3 className="font-heading font-extrabold text-lg leading-tight">Net Trust Balance</h3>
-                <p className="text-xs text-orange-100 mt-0.5">{formatCurrency(metrics.netBalance)}</p>
+                <p className="text-xs text-orange-100 mt-0.5">{formatCurrency(safeMetrics.netBalance)}</p>
               </div>
 
               <div className="mt-4 space-y-1.5">
@@ -156,7 +173,7 @@ export default function Dashboard({ metrics, charts, topDonors, recentActivity }
           {/* LOWER SECTION: RECENT DONATIONS & QUICK STATS */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
-            {/* Left: Recent Donations List (Matching Tasks for Today card style) */}
+            {/* Left: Recent Donations List */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-heading font-extrabold text-slate-900 text-base">
@@ -168,7 +185,7 @@ export default function Dashboard({ metrics, charts, topDonors, recentActivity }
               </div>
 
               <div className="space-y-3">
-                {topDonors.slice(0, 3).map((donor, idx) => {
+                {safeTopDonors.slice(0, 3).map((donor, idx) => {
                   const borderColors = ['border-l-[#ff6b57]', 'border-l-[#5c246f]', 'border-l-[#5ebec4]'];
                   return (
                     <div 
@@ -176,8 +193,8 @@ export default function Dashboard({ metrics, charts, topDonors, recentActivity }
                       className={`bg-white border border-[#eee4dd] border-l-4 ${borderColors[idx % 3]} p-4 rounded-2xl shadow-sm flex items-center justify-between hover:shadow-md transition-shadow`}
                     >
                       <div>
-                        <h4 className="font-heading font-bold text-slate-900 text-sm">{donor.name}</h4>
-                        <p className="text-xs text-slate-500 font-medium">{donor.category || 'Festival Donation'} • {donor.payment_mode}</p>
+                        <h4 className="font-heading font-bold text-slate-900 text-sm">{donor.donor_name || donor.name || 'Anonymous'}</h4>
+                        <p className="text-xs text-slate-500 font-medium">{donor.category || 'Festival Donation'} • {donor.payment_method || 'Cash'}</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="font-extrabold text-slate-900 text-sm">{formatCurrency(donor.amount)}</span>
@@ -189,7 +206,7 @@ export default function Dashboard({ metrics, charts, topDonors, recentActivity }
                   );
                 })}
 
-                {topDonors.length === 0 && (
+                {safeTopDonors.length === 0 && (
                   <div className="p-6 text-center text-slate-400 bg-[#faf4ef] rounded-2xl border border-dashed border-[#e8ded8]">
                     No donations recorded yet.
                   </div>
@@ -205,12 +222,14 @@ export default function Dashboard({ metrics, charts, topDonors, recentActivity }
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-[#faf4ef] p-4 rounded-2xl text-center border border-[#eee4dd]">
-                  <div className="font-black text-xl text-slate-900">{metrics.donorCount}</div>
+                  <div className="font-black text-xl text-slate-900">{safeMetrics.donorCount}</div>
                   <div className="text-[11px] font-semibold text-slate-500 mt-1">Devotees</div>
                 </div>
 
                 <div className="bg-[#faf4ef] p-4 rounded-2xl text-center border border-[#eee4dd]">
-                  <div className="font-black text-xl text-emerald-600">{metrics.totalPledged > 0 ? Math.round((metrics.collectedAmount / metrics.totalPledged) * 100) : 0}%</div>
+                  <div className="font-black text-xl text-emerald-600">
+                    {safeMetrics.totalPledged > 0 ? Math.round((safeMetrics.collectedAmount / safeMetrics.totalPledged) * 100) : 0}%
+                  </div>
                   <div className="text-[11px] font-semibold text-slate-500 mt-1">Collected</div>
                 </div>
 
@@ -223,14 +242,14 @@ export default function Dashboard({ metrics, charts, topDonors, recentActivity }
                 </Link>
               </div>
 
-              {/* Modern Graphic Banner (Matching Pro Plan reference widget) */}
+              {/* Modern Graphic Banner */}
               <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 border border-amber-200/70 p-5 rounded-3xl relative overflow-hidden flex items-center justify-between shadow-sm">
                 <div>
                   <span className="text-[11px] font-extrabold text-amber-700 uppercase tracking-wider bg-amber-100 px-2 py-0.5 rounded-md">
                     2026 Utsav Goal
                   </span>
                   <h4 className="font-heading font-extrabold text-slate-900 text-lg mt-1.5">
-                    {formatCurrency(metrics.totalPledged)}
+                    {formatCurrency(safeMetrics.totalPledged)}
                   </h4>
                   <p className="text-xs text-slate-600 font-medium mt-0.5">
                     Grand Utsav Celebration & Bhandara Fund
@@ -245,7 +264,7 @@ export default function Dashboard({ metrics, charts, topDonors, recentActivity }
 
           </div>
 
-          {/* DIAGRAMS ROW: COLLECTION TREND & PAYMENT MODES */}
+          {/* DIAGRAMS ROW: COLLECTION TREND */}
           <div className="bg-[#faf4ef] border border-[#eee4dd] p-5 rounded-3xl space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -257,9 +276,9 @@ export default function Dashboard({ metrics, charts, topDonors, recentActivity }
             </div>
 
             <div className="h-64 w-full bg-white p-4 rounded-2xl border border-[#eee4dd]">
-              {charts.trends.length > 0 ? (
+              {safeCharts.trends && safeCharts.trends.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={charts.trends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <AreaChart data={safeCharts.trends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="paidGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
@@ -286,7 +305,7 @@ export default function Dashboard({ metrics, charts, topDonors, recentActivity }
 
         </div>
 
-        {/* RIGHT SIDE PANEL: LIVE ACTIVITY FEED & CALENDAR (4 COLS - MATCHING RIGHT COLUMN IN REFERENCE IMAGE) */}
+        {/* RIGHT SIDE PANEL: LIVE ACTIVITY FEED & CALENDAR */}
         <div className="lg:col-span-4 bg-[#faf4ef] border border-[#eee4dd] rounded-3xl p-6 flex flex-col space-y-6">
           
           <div className="flex items-center justify-between pb-4 border-b border-[#eee4dd]">
@@ -300,14 +319,12 @@ export default function Dashboard({ metrics, charts, topDonors, recentActivity }
           </div>
 
           <div className="space-y-6 flex-1 overflow-y-auto">
-            
-            {/* Timeline Item 1 */}
             <div>
               <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider block mb-3">
                 Sep 22, 2026
               </span>
               <div className="space-y-4">
-                {recentActivity.slice(0, 5).map((act, i) => {
+                {safeRecentActivity.slice(0, 5).map((act, i) => {
                   const borderColors = ['border-amber-500', 'border-emerald-500', 'border-sky-500', 'border-purple-500'];
                   return (
                     <div key={i} className="flex gap-3 text-xs">
@@ -322,7 +339,7 @@ export default function Dashboard({ metrics, charts, topDonors, recentActivity }
                   );
                 })}
 
-                {recentActivity.length === 0 && (
+                {safeRecentActivity.length === 0 && (
                   <div className="text-xs text-slate-400 italic">No recent system activity.</div>
                 )}
               </div>
@@ -334,14 +351,14 @@ export default function Dashboard({ metrics, charts, topDonors, recentActivity }
                 Top Benefactors
               </h4>
               <div className="space-y-2.5">
-                {topDonors.slice(0, 3).map((donor, idx) => (
+                {safeTopDonors.slice(0, 3).map((donor, idx) => (
                   <div key={idx} className="bg-white p-3 rounded-2xl border border-[#eee4dd] flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <div className="w-7 h-7 rounded-full bg-amber-100 text-amber-800 font-bold text-xs flex items-center justify-center">
-                        {donor.name.charAt(0)}
+                        {(donor.donor_name || donor.name || 'D').charAt(0)}
                       </div>
                       <div>
-                        <p className="font-bold text-slate-900 text-xs truncate max-w-[110px]">{donor.name}</p>
+                        <p className="font-bold text-slate-900 text-xs truncate max-w-[110px]">{donor.donor_name || donor.name}</p>
                         <p className="text-[10px] text-slate-400">{donor.receipt_number || 'Receipt Verified'}</p>
                       </div>
                     </div>

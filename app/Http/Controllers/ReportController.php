@@ -16,22 +16,17 @@ class ReportController extends Controller
         $trustId = (string) $user->trust_id;
         $user->load('trust');
 
-        $totalIncome = (float) Donation::where('trust_id', $trustId)
-            ->where('payment_status', 'Paid')
-            ->sum('amount');
+        // Fetch Collections once to reduce remote DB roundtrip latency
+        $allDonations = Donation::where('trust_id', $trustId)->get();
+        $allExpenses = Expense::where('trust_id', $trustId)->get();
 
-        $totalExpenses = (float) Expense::where('trust_id', $trustId)
-            ->sum('amount');
-
-        $pendingAmount = (float) Donation::where('trust_id', $trustId)
-            ->where('payment_status', 'Pending')
-            ->sum('amount');
-
+        $totalIncome = (float) $allDonations->where('payment_status', 'Paid')->sum('amount');
+        $totalExpenses = (float) $allExpenses->sum('amount');
+        $pendingAmount = (float) $allDonations->where('payment_status', 'Pending')->sum('amount');
         $balance = $totalIncome - $totalExpenses;
 
         // Category breakdown for expenses
-        $expensesByCategory = Expense::where('trust_id', $trustId)
-            ->get()
+        $expensesByCategory = $allExpenses
             ->groupBy('category')
             ->map(function ($items, $category) {
                 return [
